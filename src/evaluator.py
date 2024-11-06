@@ -18,8 +18,8 @@ from .utils import restore_segmentation
 logger = getLogger()
 
 
-os.environ['TOOLS_PATH'] = '/content/shashacode'  # Adjust this path if needed
-BLEU_SCRIPT_PATH = os.path.join(os.environ['TOOLS_PATH'], 'mosesdecoder/scripts/generic/multi-bleu.perl')
+os.environ['TOOLS_PATH'] = '/content/shashacode/mosesdecoder'  # Adjust this path if needed
+BLEU_SCRIPT_PATH = os.path.join(os.environ['TOOLS_PATH'], 'scripts/generic/multi-bleu.perl')
 
 assert os.path.isfile(BLEU_SCRIPT_PATH), "Moses not found. Please be sure you downloaded Moses in %s" % os.environ['TOOLS_PATH']
 
