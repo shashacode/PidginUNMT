@@ -22,7 +22,7 @@ def get_parser():
                         help="Experiment name")
     #added arg
     parser.add_argument("--load_pretrained", type=str, default=None,
-                    help="Path to pre-trained model for fine-tuning") 
+                    help="/content/drive/MyDrive/Pidgin/UNMT_model.pth") 
     parser.add_argument("--exp_id", type=str, default="",
                         help="Experiment ID")
     parser.add_argument("--dump_path", type=str, default="./dumped/",
@@ -242,6 +242,21 @@ def main(params):
     logger = initialize_exp(params)
     data = load_data(params, mono_only = False)
     encoder, decoder, discriminator, lm = build_mt_model(params, data)
+#####
+    
+    # Insert code for loading the pre-trained model
+    if params.load_pretrained:
+        import torch
+        print(f"Loading pre-trained model from {params.load_pretrained}")
+
+        # Load pre-trained encoder weights
+        encoder_state_dict = torch.load(params.load_pretrained)["encoder"]
+        encoder.load_state_dict(encoder_state_dict)
+
+        # Load pre-trained decoder weights
+        decoder_state_dict = torch.load(params.load_pretrained)["decoder"]
+        decoder.load_state_dict(decoder_state_dict)
+#####
 
     # initialize trainer / reload checkpoint / initialize evaluator
     trainer = TrainerMT(encoder, decoder, discriminator, lm, data, params)
