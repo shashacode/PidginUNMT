@@ -390,9 +390,13 @@ if __name__ == '__main__':
 
     #Data params
     params.langs = 'en,pd'
-    params.mono_dataset = 'en:en_train.pt,en_valid.pt,en_test.pt;pd:pd_train.pt,pd_valid.pt,pd_test.pt'
-    params.para_dataset = 'en-pd:,XX_para_valid.pt,XX_para_test.pt'
+    # params.mono_dataset = 'en:en_train.pt,en_valid.pt,en_test.pt;pd:pd_train.pt,pd_valid.pt,pd_test.pt'
+    # params.para_dataset = 'en-pd:,XX_para_valid.pt,XX_para_test.pt'
+    
+    params.mono_dataset = 'en: /content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt, pd: /content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt'
+    params.para_dataset = 'en-pd: /content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt'
+    
     params.n_mono = -1
-    params.pretrained_emb = 'pidg_vect_RCSLS.txt'
+    params.pretrained_emb = '/content/drive/MyDrive/Pidgin/Aligned_RCSLS.txt'
     
     main(params)
