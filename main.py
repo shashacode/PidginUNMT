@@ -20,6 +20,9 @@ def get_parser():
     parser = argparse.ArgumentParser(description='Language transfer')
     parser.add_argument("--exp_name", type=str, default="",
                         help="Experiment name")
+    #added arg
+    parser.add_argument("--load_pretrained", type=str, default=None,
+                    help="Path to pre-trained model for fine-tuning") 
     parser.add_argument("--exp_id", type=str, default="",
                         help="Experiment ID")
     parser.add_argument("--dump_path", type=str, default="./dumped/",
