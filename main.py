@@ -399,10 +399,10 @@ if __name__ == '__main__':
     params.lambda_xe_otfd = '1'
     params.lambda_dis = '1'
     params.stopping_criterion = 'bleu_en_pd_valid,10'
-    params.epoch_size = 500000
+    params.epoch_size = 5
     params.enc_optimizer = 'adam,lr=0.0001'
-    params.otf_num_processes = 30
-    params.batch_size = 16
+    params.otf_num_processes = 3
+    params.batch_size = 10
     params.max_len = 100
     params.save_periodic = True
  
