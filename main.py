@@ -1,20 +1,20 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
+ 
 import time
 import json
 import argparse
 import warnings
 warnings.simplefilter("ignore")
-
+ 
 from src.data.loader import check_all_data_params, load_data
 from src.utils import bool_flag, initialize_exp
 from src.model import check_mt_model_params, build_mt_model
 from src.trainer import TrainerMT
 from src.evaluator import EvaluatorMT
-
-
+ 
+ 
 def get_parser():
     # parse parameters
     parser = argparse.ArgumentParser(description='Language transfer')
@@ -22,7 +22,7 @@ def get_parser():
                         help="Experiment name")
     #added arg
     parser.add_argument("--load_pretrained", type=str, default=None,
-                    help="/content/drive/MyDrive/Pidgin/UNMT_model.pth") 
+                    help="/content/drive/MyDrive/Pidgin/UNMT_model.pth")
     parser.add_argument("--exp_id", type=str, default="",
                         help="Experiment ID")
     parser.add_argument("--dump_path", type=str, default="./dumped/",
@@ -230,45 +230,45 @@ def get_parser():
     parser.add_argument("--length_penalty", type=float, default=1.0,
                         help="Length penalty: <1.0 favors shorter, >1.0 favors longer sentences")
     return parser
-
-
+ 
+ 
 def main(params):
     # check parameters
     assert params.exp_name
     check_all_data_params(params)
     check_mt_model_params(params)
-
+ 
     # initialize experiment / load data / build model
     logger = initialize_exp(params)
     data = load_data(params, mono_only = False)
     encoder, decoder, discriminator, lm = build_mt_model(params, data)
 #####
-    
+   
     # Insert code for loading the pre-trained model
     if params.load_pretrained:
         import torch
         print(f"Loading pre-trained model from {params.load_pretrained}")
-
+ 
         # Load pre-trained encoder weights
         encoder_state_dict = torch.load(params.load_pretrained)["encoder"]
         encoder.load_state_dict(encoder_state_dict)
-
+ 
         # Load pre-trained decoder weights
         decoder_state_dict = torch.load(params.load_pretrained)["decoder"]
         decoder.load_state_dict(decoder_state_dict)
 #####
-
+ 
     # initialize trainer / reload checkpoint / initialize evaluator
     trainer = TrainerMT(encoder, decoder, discriminator, lm, data, params)
     trainer.reload_checkpoint()
     trainer.test_sharing()  # check parameters sharing
     evaluator = EvaluatorMT(trainer, data, params)
-
+ 
     # evaluation mode
     if params.eval_only:
         evaluator.run_all_evals(0)
         exit()
-
+ 
     # language model pretraining
     if params.lm_before > 0:
         logger.info("Pretraining language model for %i iterations ..." % params.lm_before)
@@ -277,63 +277,63 @@ def main(params):
             for lang in params.langs:
                 trainer.lm_step(lang)
             trainer.iter()
-
+ 
     # define epoch size
     if params.epoch_size == -1:
         params.epoch_size = params.n_para
     assert params.epoch_size > 0
-    
+   
     # start training
     for _ in range(trainer.epoch, params.max_epoch):
-
+ 
         logger.info("====================== Starting epoch %i ... ======================" % trainer.epoch)
-
+ 
         trainer.n_sentences = 0
-
+ 
         while trainer.n_sentences < params.epoch_size:
-
+ 
             # discriminator training
             for _ in range(params.n_dis):
                 trainer.discriminator_step()
-
+ 
             # language model training
             if params.lambda_lm > 0:
                 for _ in range(params.lm_after):
                     for lang in params.langs:
                         trainer.lm_step(lang)
-
+ 
             # MT training (parallel data)
             if params.lambda_xe_para > 0:
                 for lang1, lang2 in params.para_directions:
                     trainer.enc_dec_step(lang1, lang2, params.lambda_xe_para)
-
+ 
             # MT training (back-parallel data)
             if params.lambda_xe_back > 0:
                 for lang1, lang2 in params.back_directions:
                     trainer.enc_dec_step(lang1, lang2, params.lambda_xe_back, back=True)
-
+ 
             # autoencoder training (monolingual data)
             if params.lambda_xe_mono > 0:
                 for lang in params.mono_directions:
                     trainer.enc_dec_step(lang, lang, params.lambda_xe_mono)
-
+ 
             # AE - MT training (on the fly back-translation)
             if params.lambda_xe_otfd > 0 or params.lambda_xe_otfa > 0:
-
+ 
                 # start on-the-fly batch generations
                 if not getattr(params, 'started_otf_batch_gen', False):
                     otf_iterator = trainer.otf_bt_gen_async()
                     params.started_otf_batch_gen = True
-
+ 
                 # update model parameters on subprocesses
                 if trainer.n_iter % params.otf_sync_params_every == 0:
                     trainer.otf_sync_params()
-
+ 
                 # get training batch from CPU
                 before_gen = time.time()
                 batches = next(otf_iterator)
                 trainer.gen_time += time.time() - before_gen
-
+ 
                 # training
                 for batch in batches:
                     lang1, lang2, lang3 = batch['lang1'], batch['lang2'], batch['lang3']
@@ -346,33 +346,33 @@ def main(params):
                     # 3-lang back-translation - parallel data
                     elif lang1 != lang2 and lang2 != lang3 and lang1 != lang3:
                         trainer.otf_bt(batch, params.lambda_xe_otfd, params.otf_backprop_temperature)
-
+ 
             trainer.iter()
-
+ 
         # end of epoch
         logger.info("====================== End of epoch %i ======================" % trainer.epoch)
-
+ 
         # evaluate discriminator / perplexity / BLEU
         scores = evaluator.run_all_evals(trainer.epoch)
-        
-
+       
+ 
         # print / JSON log
         for k, v in scores.items():
             logger.info('%s -> %.6f' % (k, v))
         logger.info("__log__:%s" % json.dumps(scores))
-
+ 
         # save best / save periodic / end epoch
         trainer.save_best_model(scores)
         trainer.save_periodic()
         trainer.end_epoch(scores)
         trainer.test_sharing()
-
-
+ 
+ 
 if __name__ == '__main__':
-
+ 
     parser = get_parser()
     params, unknown = parser.parse_known_args()
-    
+   
     #Model params
     params.emb_dim = 300
     params.hidden_dim = 300
@@ -386,7 +386,7 @@ if __name__ == '__main__':
     params.share_encdec_emb = True
     params.share_output_emb = True
     params.share_decpro_emb = True
-
+ 
     #Training params
     params.exp_name = 'en_pd_exp'
     params.word_shuffle = 3
@@ -405,19 +405,19 @@ if __name__ == '__main__':
     params.batch_size = 16
     params.max_len = 100
     params.save_periodic = True
-
+ 
     #Data params
     params.langs = 'en,pd'
-    # params.mono_dataset = 'en:en_train.pt,en_valid.pt,en_test.pt;pd:pd_train.pt,pd_valid.pt,pd_test.pt'
+    # params.mono_dataset = 'en:en_tra.pt,en_valid.pt,en_test.pt;pd:pd_train.pt,pd_valid.pt,pd_test.pt'
     # params.para_dataset = 'en-pd:,XX_para_valid.pt,XX_para_test.pt'
-
-    # params.mono_dataset = 'en:/content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt;pd:/content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt'
-    params.para_dataset = 'en-pd:/content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt;pd-en:/content/drive/MyDrive/Pidgin/pd_en_para_train.pt,/content/drive/MyDrive/Pidgin/pd_en_para_valid.pt'
-
-    
+ 
+    params.mono_dataset = 'en:/content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt,/content/drive/MyDrive/Pidgin/en_test.pt;pd:/content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt,/content/drive/MyDrive/Pidgin/pd_test.pt'
+    params.para_dataset = 'en-pd:/content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt,/content/drive/MyDrive/Pidgin/en_pd_para_test.pt'
+ 
+   
     # params.mono_dataset = 'en: /content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt, pd: /content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt'
     # params.para_dataset = 'en-pd: /content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt'
     params.n_mono = -1
     params.pretrained_emb = '/content/drive/MyDrive/Pidgin/Aligned_RCSLS.txt'
-    
+   
     main(params)
