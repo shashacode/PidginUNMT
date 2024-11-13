@@ -327,7 +327,8 @@ def check_all_data_params(params):
                    for paths in params.mono_dataset.values())
 
     # check parallel datasets
-    params.para_dataset = {k: v for k, v in [x.split(':') for x in params.para_dataset.split(';') if len(x) > 0]}
+    params.para_dataset = {k: v for k, v in [x.split(':') for x in params.para_dataset.split(';') if len(x) > 0]} 
+    print(params.para_dataset)
     assert type(params.para_dataset) is dict
     assert all(len(k.split('-')) == 2 for k in params.para_dataset.keys())
     assert all(len(v.split(',')) == 3 for v in params.para_dataset.values())
