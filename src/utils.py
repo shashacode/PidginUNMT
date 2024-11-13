@@ -3,7 +3,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
-
+ 
 import os
 import re
 import sys
@@ -16,19 +16,19 @@ from logging import getLogger
 import numpy as np
 import torch
 from torch import optim
-
+ 
 from .logger import create_logger
 from .data.dictionary import EOS_WORD, UNK_WORD
 from .adam_inverse_sqrt_with_warmup import AdamInverseSqrtWithWarmup
-
-
+ 
+ 
 logger = getLogger()
-
-
+ 
+ 
 FALSY_STRINGS = {'off', 'false', '0'}
 TRUTHY_STRINGS = {'on', 'true', '1'}
-
-
+ 
+ 
 def bool_flag(s):
     """
     Parse boolean arguments from the command line.
@@ -39,8 +39,8 @@ def bool_flag(s):
         return True
     else:
         raise argparse.ArgumentTypeError("invalid value for a boolean flag")
-
-
+ 
+ 
 def initialize_exp(params, logger_filename='train.log'):
     """
     Initialize the experience:
@@ -51,7 +51,7 @@ def initialize_exp(params, logger_filename='train.log'):
     # dump parameters
     get_dump_path(params)
     pickle.dump(params, open(os.path.join(params.dump_path, 'params.pkl'), 'wb'))
-
+ 
     # get running command
     command = ["python", sys.argv[0]]
     for x in sys.argv[1:]:
@@ -63,18 +63,18 @@ def initialize_exp(params, logger_filename='train.log'):
             command.append("'%s'" % x)
     command = ' '.join(command)
     params.command = command + ' --exp_id "%s"' % params.exp_id
-
+ 
     # random seed
     if params.seed >= 0:
         np.random.seed(params.seed)
         torch.manual_seed(params.seed)
         torch.cuda.manual_seed(params.seed)
-
+ 
     # environment variables
     if 'pivo_directions' in params and len(params.pivo_directions) > 0:
         os.environ["OMP_NUM_THREADS"] = "2"
         os.environ["MKL_NUM_THREADS"] = "2"
-
+ 
     # create a logger
     logger = create_logger(os.path.join(params.dump_path, logger_filename))
     logger.info('============ Initialized logger ============')
@@ -83,8 +83,8 @@ def initialize_exp(params, logger_filename='train.log'):
     logger.info('The experiment will be stored in %s\n' % params.dump_path)
     logger.info('Running command: %s\n' % params.command)
     return logger
-
-
+ 
+ 
 def get_dump_path(params):
     """
     Create a directory to store the experiment.
@@ -93,12 +93,12 @@ def get_dump_path(params):
     dump_path = './' if params.dump_path == '' else params.dump_path
     subprocess.Popen("mkdir -p %s" % dump_path, shell=True).wait()
     assert os.path.isdir(dump_path)
-
+ 
     # create the sweep path if it does not exist
     sweep_path = os.path.join(dump_path, params.exp_name)
     if not os.path.exists(sweep_path):
         subprocess.Popen("mkdir %s" % sweep_path, shell=True).wait()
-
+ 
     # create an ID for the job if it is not given in the parameters.
     # if we run on the cluster, the job ID is the one of Chronos.
     # otherwise, it is randomly generated
@@ -117,13 +117,13 @@ def get_dump_path(params):
         params.exp_id = exp_id
     else:
         assert os.path.isdir(os.path.join(sweep_path, params.exp_id))  # reload an experiment
-
+ 
     # create the dump folder / update parameters
     params.dump_path = os.path.join(sweep_path, params.exp_id)
     if not os.path.isdir(params.dump_path):
         subprocess.Popen("mkdir %s" % params.dump_path, shell=True).wait()
-
-
+ 
+ 
 def get_optimizer(parameters, s):
     """
     Parse optimizer parameters.
@@ -142,7 +142,7 @@ def get_optimizer(parameters, s):
     else:
         method = s
         optim_params = {}
-
+ 
     if method == 'adadelta':
         optim_fn = optim.Adadelta
     elif method == 'adagrad':
@@ -171,17 +171,25 @@ def get_optimizer(parameters, s):
         optim_params.pop('beta2', None)
     else:
         raise Exception('Unknown optimization method: "%s"' % method)
-
-    # check that we give good parameters to the optimizer
-    expected_args = inspect.getargspec(optim_fn.__init__)[0]
-    assert expected_args[:2] == ['self', 'params']
-    if not all(k in expected_args[2:] for k in optim_params.keys()):
+ 
+    # Inspect the parameters of the optimizer's __init__ function
+    expected_args = inspect.signature(optim_fn.__init__).parameters
+   
+    # Extract the parameter names (keys of the ordered dict)
+    expected_arg_names = list(expected_args.keys())
+   
+    # Check that the first two parameters are 'self' and 'params'
+    assert expected_arg_names[:2] == ['self', 'params']
+   
+    # Check that all keys in optim_params are valid parameters in expected_args (from index 2 onward)
+    if not all(k in expected_arg_names[2:] for k in optim_params.keys()):
         raise Exception('Unexpected parameters: expected "%s", got "%s"' % (
-            str(expected_args[2:]), str(optim_params.keys())))
-
+            str(expected_arg_names[2:]), str(optim_params.keys())))
+ 
+    # If everything checks out, return the optimizer with the provided parameters
     return optim_fn(parameters, **optim_params)
-
-
+ 
+ 
 def reload_parameters(old_params, new_params, attributes):
     """
     Reload the parameters of a previous model.
@@ -189,8 +197,8 @@ def reload_parameters(old_params, new_params, attributes):
     for k, v in old_params.__dict__.items():
         if k in attributes and k not in new_params:
             setattr(new_params, k, v)
-
-
+ 
+ 
 def reload_model(model, to_reload, attributes):
     """
     Reload a previously trained model.
@@ -200,7 +208,7 @@ def reload_model(model, to_reload, attributes):
     to_reload_params = set(to_reload.state_dict().keys())
     assert model_params == to_reload_params, (model_params - to_reload_params,
                                               to_reload_params - model_params)
-
+ 
     # check attributes
     warnings = []
     errors = []
@@ -221,7 +229,7 @@ def reload_model(model, to_reload, attributes):
     if len(errors) > 0:
         logger.error('Incompatible parameters:\n%s' % '\n'.join(errors))
         exit()
-
+ 
     # copy saved parameters
     for k in model.state_dict().keys():
         if model.state_dict()[k].size() != to_reload.state_dict()[k].size():
@@ -230,8 +238,8 @@ def reload_model(model, to_reload, attributes):
                 to_reload.state_dict()[k].size()
             ))
         model.state_dict()[k].copy_(to_reload.state_dict()[k])
-
-
+ 
+ 
 def clip_parameters(model, clip):
     """
     Clip model weights.
@@ -239,8 +247,8 @@ def clip_parameters(model, clip):
     if clip > 0:
         for x in model.parameters():
             x.data.clamp_(-clip, clip)
-
-
+ 
+ 
 def get_grad_norm(model):
     """
     Return the norm of the parameters gradients.
@@ -249,8 +257,8 @@ def get_grad_norm(model):
     for param in model.parameters():
         norm += param.grad.data.norm(2) ** 2
     return np.sqrt(norm)
-
-
+ 
+ 
 def parse_lambda_config(params, name):
     """
     Parse the configuration of lambda coefficient (for scheduling).
@@ -270,8 +278,8 @@ def parse_lambda_config(params, name):
         assert all(int(split[i][0]) < int(split[i + 1][0]) for i in range(len(split) - 1))
         setattr(params, name, float(split[0][1]))
         setattr(params, name + '_config', [(int(k), float(v)) for k, v in split])
-
-
+ 
+ 
 def update_lambda_value(config, n_iter):
     """
     Update a lambda value according to its schedule configuration.
@@ -285,8 +293,8 @@ def update_lambda_value(config, n_iter):
     x_a, y_a = config[i]
     x_b, y_b = config[i + 1]
     return y_a + (n_iter - x_a) * float(y_b - y_a) / float(x_b - x_a)
-
-
+ 
+ 
 def update_lambdas(params, n_total_iter):
     """
     Update all lambda coefficients.
@@ -305,8 +313,8 @@ def update_lambdas(params, n_total_iter):
         params.lambda_dis = update_lambda_value(params.lambda_dis_config, n_total_iter)
     if params.lambda_lm_config is not None:
         params.lambda_lm = update_lambda_value(params.lambda_lm_config, n_total_iter)
-
-
+ 
+ 
 def get_mask(lengths, all_words, expand=None, ignore_first=False, batch_first=False, cuda=True):
     """
     Create a mask of shape (slen, bs) or (bs, slen).
@@ -328,8 +336,8 @@ def get_mask(lengths, all_words, expand=None, ignore_first=False, batch_first=Fa
     if cuda:
         mask = mask.cuda()
     return mask
-
-
+ 
+ 
 def reverse_sentences(batch, lengths):
     """
     Reverse sentences inside a batch.
@@ -341,8 +349,8 @@ def reverse_sentences(batch, lengths):
     for i in range(bs):
         new_batch[:lengths[i], i].copy_(new_batch[:, i][inv_idx[-lengths[i]:]])
     return new_batch
-
-
+ 
+ 
 def restore_segmentation(path):
     """
     Take a file segmented with BPE and restore it to its original segmentation.
@@ -350,8 +358,8 @@ def restore_segmentation(path):
     assert os.path.isfile(path)
     restore_cmd = "sed -i -r 's/(@@ )|(@@ ?$)//g' %s"
     subprocess.Popen(restore_cmd % path, shell=True).wait()
-
-
+ 
+ 
 def create_word_masks(params, data):
     """
     Create masks for allowed / forbidden output words.
@@ -368,3 +376,4 @@ def create_word_masks(params, data):
         mask_neg = [i for i in range(n_words) if i not in mask_pos]
         params.vocab_mask_pos.append(torch.LongTensor(sorted(mask_pos)))
         params.vocab_mask_neg.append(torch.LongTensor(sorted(mask_neg)))
+ 
