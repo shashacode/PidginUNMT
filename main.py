@@ -411,8 +411,8 @@ if __name__ == '__main__':
     # params.mono_dataset = 'en:en_tra.pt,en_valid.pt,en_test.pt;pd:pd_train.pt,pd_valid.pt,pd_test.pt'
     # params.para_dataset = 'en-pd:,XX_para_valid.pt,XX_para_test.pt'
  
-    params.mono_dataset = 'en:/content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt,/content/drive/MyDrive/Pidgin/en_test.pt;pd:/content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt,/content/drive/MyDrive/Pidgin/pd_test.pt'
-    params.para_dataset = 'en-pd:/content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt,/content/drive/MyDrive/Pidgin/en_pd_para_test.pt'
+    # params.mono_dataset = 'en:/content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt,/content/drive/MyDrive/Pidgin/en_test.pt;pd:/content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt,/content/drive/MyDrive/Pidgin/pd_test.pt'
+    # params.para_dataset = 'en-pd:/content/drive/MyDrive/Pidgin/en_pd_para_train.pt,/content/drive/MyDrive/Pidgin/en_pd_para_valid.pt,/content/drive/MyDrive/Pidgin/en_pd_para_test.pt'
  
    
     # params.mono_dataset = 'en: /content/drive/MyDrive/Pidgin/en_train.pt,/content/drive/MyDrive/Pidgin/en_valid.pt, pd: /content/drive/MyDrive/Pidgin/pd_train.pt,/content/drive/MyDrive/Pidgin/pd_valid.pt'
